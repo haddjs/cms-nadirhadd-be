@@ -32,13 +32,13 @@ const getExperienceByIdController = async (req: Request, res: Response) => {
 
 const addExperienceController = async (req: Request, res: Response) => {
   try {
-    const newExperience = await addExperience(req.body);
-
     if (!req.body.company_name || !req.body.role || !req.body.start_date) {
       return res.status(400).json({
         error: "Missing required fields: company_name, role, start_date",
       });
     }
+
+    const newExperience = await addExperience(req.body);
 
     res.status(201).json({ message: "Experience added!", data: newExperience });
   } catch (error) {

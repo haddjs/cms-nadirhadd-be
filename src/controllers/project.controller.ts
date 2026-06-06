@@ -8,6 +8,7 @@ import {
   getAllProjects,
   getProjectById,
   getProjectImages,
+  updateProject,
 } from "../models/project.model";
 
 const getProjectsController = async (_req: Request, res: Response) => {
@@ -96,10 +97,32 @@ const deleteProjectController = async (req: Request, res: Response) => {
   }
 };
 
+const updateProjectController = async (req: Request, res: Response) => {
+  try {
+    const projectId = req.params.id as string;
+
+    const payload = {
+      ...req.body,
+      tech_stacks: req.body.tech_stacks
+        ? JSON.parse(req.body.tech_stacks)
+        : undefined,
+    };
+
+    await updateProject(projectId, payload);
+    res
+      .status(200)
+      .json({ message: "Projects updated!", data: { projectId, ...req.body } });
+  } catch (error) {
+    logger.error("Error in updateProject controller:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export {
   addProjectController,
   deleteProjectController,
   getProjectByIdController,
   getProjectImagesController,
   getProjectsController,
+  updateProjectController,
 };

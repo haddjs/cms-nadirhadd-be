@@ -1,6 +1,9 @@
 import pool from "../config/db";
 import logger from "../config/logger";
-import { AddProjectPayload } from "../types/project.types";
+import type {
+  AddProjectPayload,
+  UpdateProjectPayload,
+} from "../types/project.types";
 
 const getAllProjects = async () => {
   try {
@@ -121,10 +124,75 @@ const deleteProject = async (id: string) => {
   }
 };
 
+const updateProject = async (id: string, payload: UpdateProjectPayload) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    for (const key in payload) {
+      if (payload[key as keyof UpdateProjectPayload] !== undefined) {
+        if (key === "tech_stacks") continue;
+        fields.push(`${key} = $${index}`);
+        values.push(payload[key as keyof UpdateProjectPayload]);
+        index++;
+      }
+    }
+
+    if (fields.length > 0) {
+      await client.query(
+        `UPDATE projects SET ${fields.join(", ")} WHERE id = $${index}`,
+        [...values, id],
+      );
+    }
+
+    await client.query(
+      "DELETE FROM project_tech_stacks WHERE project_id = $1",
+      [id],
+    );
+
+    if (payload.tech_stacks && payload.tech_stacks.length > 0) {
+      for (const techStackName of payload.tech_stacks) {
+        const techStackRes = await client.query(
+          "SELECT id from tech_stacks WHERE name = $1",
+          [techStackName],
+        );
+        let techStackId: string;
+        if (techStackRes.rows.length > 0) {
+          techStackId = techStackRes.rows[0].id;
+        } else {
+          const insertTechStackRes = await client.query(
+            "INSERT INTO tech_stacks (name) VALUES ($1) RETURNING id",
+            [techStackName],
+          );
+          techStackId = insertTechStackRes.rows[0].id;
+        }
+
+        await client.query(
+          "INSERT INTO project_tech_stacks (project_id, tech_stack_id) VALUES ($1, $2)",
+          [id, techStackId],
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+    return { ...payload };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 export {
   addProject,
   deleteProject,
   getAllProjects,
   getProjectById,
   getProjectImages,
+  updateProject,
 };
