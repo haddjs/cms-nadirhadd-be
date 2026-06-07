@@ -143,10 +143,12 @@ const updateProject = async (id: string, payload: UpdateProjectPayload) => {
     }
 
     if (fields.length > 0) {
-      await client.query(
-        `UPDATE projects SET ${fields.join(", ")} WHERE id = $${index}`,
+      const res = await client.query(
+        `UPDATE projects SET ${fields.join(", ")} WHERE id = $${index} RETURNING id`,
         [...values, id],
       );
+
+      return res.rows[0];
     }
 
     await client.query(
