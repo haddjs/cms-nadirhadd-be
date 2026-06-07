@@ -96,13 +96,17 @@ const updateExperience = async (
     }
 
     if (fields.length > 0) {
-      await client.query(
-        `UPDATE experiences SET ${fields.join(", ")} WHERE id = $${index}`,
+      const res = await client.query(
+        `UPDATE experiences SET ${fields.join(", ")} WHERE id = $${index} RETURNING id`,
         [...values, id],
       );
+
+      return res.rows[0];
     }
 
     await client.query("COMMIT");
+
+    return { ...payload };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -120,11 +124,14 @@ const deleteExperience = async (id: string) => {
       "DELETE FROM experience_tech_stacks WHERE experience_id = $1",
       [id],
     );
-    await client.query("DELETE FROM experiences WHERE id = $1", [id]);
+    const deleteProjectRes = await client.query(
+      "DELETE FROM experiences WHERE id = $1 RETURNING id",
+      [id],
+    );
 
     await client.query("COMMIT");
 
-    return id;
+    return deleteProjectRes.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
