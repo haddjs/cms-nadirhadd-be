@@ -12,7 +12,6 @@ const getAllProjects = async () => {
     );
     return res.rows;
   } catch (error) {
-    logger.error("Error fetching projects:", error);
     throw error;
   }
 };
