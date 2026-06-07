@@ -121,17 +121,17 @@ const deleteExperience = async (id: string) => {
     await client.query("BEGIN");
 
     await client.query(
-      "DELETE FROM experience_tech_stacks WHERE experience_id = $1",
+      "DELETE FROM experience_tech_stacks WHERE experience_id = $1 RETURNING experience_id",
       [id],
     );
-    const deleteProjectRes = await client.query(
+    const deleteExperienceRes = await client.query(
       "DELETE FROM experiences WHERE id = $1 RETURNING id",
       [id],
     );
 
     await client.query("COMMIT");
 
-    return deleteProjectRes.rows[0];
+    return deleteExperienceRes.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

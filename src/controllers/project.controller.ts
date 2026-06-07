@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import cloudinary from "../config/cloudinary";
 import logger from "../config/logger";
 import { uploadToCloudinary } from "../helper/uploadCloudinary";
@@ -10,43 +10,65 @@ import {
   getProjectImages,
   updateProject,
 } from "../models/project.model";
+import { NotFoundError, ValidationError } from "../utils/AppError";
 
-const getProjectsController = async (_req: Request, res: Response) => {
+const getProjectsController = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const projects = await getAllProjects();
+    logger.info("Fetching projects");
     res.status(200).json(projects);
   } catch (error) {
-    logger.error("Error in getProjects controller:", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const getProjectByIdController = async (req: Request, res: Response) => {
+const getProjectByIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
+    const projectId = req.params.id as string;
     const project = await getProjectById(req.params.id as string);
+    if (!project) throw new NotFoundError("Project not found");
+
+    logger.info(`Fetching project ${projectId}`);
     res.status(200).json(project);
   } catch (error) {
-    logger.error("Error in getProjectById controller:", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const getProjectImagesController = async (req: Request, res: Response) => {
+const getProjectImagesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const images = await getProjectImages(req.params.id as string);
+    if (!images || images.length === 0)
+      throw new NotFoundError("Image(s) not found");
+    logger.info("Fetching images");
     res.status(200).json(images);
   } catch (error) {
-    logger.error("Error fetching images from projects", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const addProjectController = async (req: Request, res: Response) => {
+const addProjectController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const files = req.files as Express.Multer.File[];
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ error: "No images inputted" });
+      throw new ValidationError("No images inputted");
     }
 
     const uploadedImages = await Promise.all(
@@ -68,16 +90,20 @@ const addProjectController = async (req: Request, res: Response) => {
       images: uploadedImages,
     });
 
+    logger.info("Adding project");
     res
       .status(201)
       .json({ message: "Project added successfully", project: newProject });
   } catch (error) {
-    logger.error("Error in addProject controller:", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const deleteProjectController = async (req: Request, res: Response) => {
+const deleteProjectController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const projectId = req.params.id as string;
     const images = await getProjectImages(projectId);
@@ -88,16 +114,21 @@ const deleteProjectController = async (req: Request, res: Response) => {
       );
     }
 
-    await deleteProject(projectId);
+    const deleted = await deleteProject(projectId);
+    if (!deleted) throw new NotFoundError("Project does not exist.");
 
+    logger.info(`Deleting project ${projectId}`);
     res.status(200).json({ message: "Project deletion success!" });
   } catch (error) {
-    logger.error("Error in deleteProject controller", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const updateProjectController = async (req: Request, res: Response) => {
+const updateProjectController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const projectId = req.params.id as string;
 
@@ -108,13 +139,18 @@ const updateProjectController = async (req: Request, res: Response) => {
         : undefined,
     };
 
-    await updateProject(projectId, payload);
+    if (Object.keys(req.body).length === 0) {
+      throw new ValidationError("No fields updated");
+    }
+
+    const updated = await updateProject(projectId, payload);
+    if (!updated) throw new NotFoundError("Project not found");
+    logger.info(`Updating project ${projectId}`);
     res
       .status(200)
       .json({ message: "Projects updated!", data: { projectId, ...req.body } });
   } catch (error) {
-    logger.error("Error in updateProject controller:", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 

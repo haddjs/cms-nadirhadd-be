@@ -104,18 +104,24 @@ const deleteProject = async (id: string) => {
   try {
     await client.query("BEGIN");
 
-    await client.query("DELETE FROM project_images WHERE project_id = $1", [
-      id,
-    ]);
-
     await client.query(
-      "DELETE FROM project_tech_stacks WHERE project_id = $1",
+      "DELETE FROM project_images WHERE project_id = $1 RETURNING project_id",
       [id],
     );
 
-    await client.query("DELETE FROM projects WHERE id = $1", [id]);
+    await client.query(
+      "DELETE FROM project_tech_stacks WHERE project_id = $1 RETURNING project_id",
+      [id],
+    );
+
+    const deleteProjectRes = await client.query(
+      "DELETE FROM projects WHERE id = $1 RETURNING id",
+      [id],
+    );
 
     await client.query("COMMIT");
+
+    return deleteProjectRes.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
