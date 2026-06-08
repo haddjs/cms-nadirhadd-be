@@ -71,16 +71,21 @@ const addProjectController = async (
       throw new ValidationError("No images inputted");
     }
 
-    const uploadedImages = await Promise.all(
-      files.map(async (file, index) => {
-        const uploadResult = await uploadToCloudinary(file.buffer);
-        return {
-          image_url: uploadResult.secure_url,
-          is_thumbnail: index === 0,
-          public_id: uploadResult.public_id,
-        };
-      }),
-    );
+    const uploadedImages: {
+      image_url: string;
+      is_thumbnail: boolean;
+      public_id: string;
+    }[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const uploadResult = await uploadToCloudinary(files[i].buffer);
+      logger.info(`${files[i]}: ${files[i].originalname}`);
+      uploadedImages.push({
+        image_url: uploadResult.secure_url,
+        is_thumbnail: i === 0,
+        public_id: uploadResult.public_id,
+      });
+    }
 
     const tech_stacks = JSON.parse(req.body.tech_stacks);
 

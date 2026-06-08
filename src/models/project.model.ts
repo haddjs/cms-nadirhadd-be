@@ -7,7 +7,7 @@ import type {
 const getAllProjects = async () => {
   try {
     const res = await pool.query(
-      "SELECT projects.id, projects.title, projects.description, projects.url, projects.github_url, projects.status, array_agg(DISTINCT tech_stacks.name) AS tech_stacks, json_agg(DISTINCT jsonb_build_object('image_url', project_images.image_url, 'is_thumbnail', project_images.is_thumbnail, 'public_id', project_images.public_id) ORDER BY project_images.is_thumbnail DESC) as images FROM projects LEFT JOIN project_tech_stacks ON projects.id = project_tech_stacks.project_id LEFT JOIN tech_stacks ON project_tech_stacks.tech_stack_id = tech_stacks.id LEFT JOIN project_images ON projects.id = project_images.project_id GROUP BY projects.id",
+      "SELECT projects.id, projects.title, projects.description, projects.url, projects.github_url, projects.status, array_agg(DISTINCT tech_stacks.name) AS tech_stacks, json_agg(DISTINCT jsonb_build_object('image_url', project_images.image_url, 'is_thumbnail', project_images.is_thumbnail, 'public_id', project_images.public_id)) as images FROM projects LEFT JOIN project_tech_stacks ON projects.id = project_tech_stacks.project_id LEFT JOIN tech_stacks ON project_tech_stacks.tech_stack_id = tech_stacks.id LEFT JOIN project_images ON projects.id = project_images.project_id GROUP BY projects.id",
     );
     return res.rows;
   } catch (error) {
